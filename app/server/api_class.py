@@ -43,7 +43,7 @@ class ServeModel(Resource):
         model_load.compile(loss="sparse_categorical_crossentropy", optimizer="adam", metrics=["accuracy"])
         graph = tf.compat.v1.get_default_graph()
 
-        img_read = imageio.imread("./server/test.jpeg", pilmode="L")
+        img_read = imageio.imread(data["URL"], pilmode="L")
         img_read = np.invert(img_read)
         img_read = resize(img_read, (28,28))
         img_read = img_read.reshape(1, 28, 28, 1)
