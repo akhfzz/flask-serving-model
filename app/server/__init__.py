@@ -1,1 +1,1 @@
-from .api_class import ServeModel, api, app
+from .api_class import ServeModelTF, api, app

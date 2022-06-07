@@ -1,6 +1,6 @@
-from server import ServeModel, api, app
+from server import ServeModelTF, api, app
 
-api.add_resource(ServeModel, '/predict/')
+api.add_resource(ServeModelTF, '/predict/')
 
 if __name__ == "__main__":
     app.run(debug=True)

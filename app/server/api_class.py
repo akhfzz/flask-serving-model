@@ -1,60 +1,59 @@
 from .main import app, api 
 from flask_restful import Resource, reqparse
 from flask import jsonify
-from keras.models import Sequential
 from skimage.transform import resize
-import keras as k
-import re
 import numpy as np
-import base64
 import imageio
 import tensorflow as tf
+import keras as K
+from keras.models import load_model, model_from_json
+import pandas as pd
 
-def init():
-    with open("./modeling/result.json", "r") as rjson:
-        loaded = rjson.read()
-    model_load = tf.keras.models.model_from_json(loaded)
-    model_load.load_weights("./modeling/model.h5")
-    model_load.compile(loss="categorical_crossentropy", optimizer="adam", metrics=["accuracy"]) 
-    graph = tf.compat.v1.get_default_graph
-    return model_load, graph
+def rmse(y_true, y_pred):
+    return K.sqrt(K.mean(K.square(y_pred - y_true)))
 
-def convert(img):
-    with open('output.png','wb') as output:
-	    output.write(base64.b64decode(img))
+def auc(y_true, y_pred):
+    auc = tf.metrics.auc(y_true, y_pred)[1]
+    K.backend.get_session().run(tf.local_variables_initializer())
+    return auc
 
-# model, graph = init()
-# response = None
+model_load = load_model('./modeling/model_repfit_v1.h5', custom_objects={'rmse': rmse})
+model_load.load_weights("./modeling/model_repfit_weight_v1.h5")
 
-class ServeModel(Resource):
+class ServeModelTF(Resource):
     def __init__(self):
         self.parser = reqparse.RequestParser()
-        self.parser.add_argument('URL', type=str, help="Please fill url image")
+        self.parser.add_argument('product_score')
+        self.parser.add_argument('qty')
+        self.parser.add_argument('freight_price')
+        self.parser.add_argument('product_weight_g')
+        self.parser.add_argument('lag_price')
+        self.parser.add_argument('comp1')
+        self.parser.add_argument('ps1')
+        self.parser.add_argument('fp1')
+        self.parser.add_argument('comp2')
+        self.parser.add_argument('ps2')
+        self.parser.add_argument('fp2')
+        self.parser.add_argument('bed_bath_table')
+        self.parser.add_argument('computers_accessories')
+        self.parser.add_argument('consoles_games')
+        self.parser.add_argument('cool_stuff"')
+        self.parser.add_argument('furniture_decor')
+        self.parser.add_argument('garden_tools')
+        self.parser.add_argument('health_beauty')
+        self.parser.add_argument('perfumery')
+        self.parser.add_argument('watches_gifts')
 
     def post(self):
-        global response
 
         data = self.parser.parse_args()
-        rjson = open("./modeling/result.json", "r")
-        loaded = rjson.read()
-        rjson.close()
-        model_load = tf.keras.models.model_from_json(loaded)
-        model_load.load_weights("./modeling/model.h5")
-        model_load.compile(loss="sparse_categorical_crossentropy", optimizer="adam", metrics=["accuracy"])
-        graph = tf.compat.v1.get_default_graph()
+        print(data["fp1"])
 
-        img_read = imageio.imread(data["URL"], pilmode="L")
-        img_read = np.invert(img_read)
-        img_read = resize(img_read, (28,28))
-        img_read = img_read.reshape(1, 28, 28, 1)
-        # print(img_read)
-        # with graph.as_default():
-        output = model_load.predict(img_read)
-        response = np.array_str(np.argmax(output,axis=1))
-            # model = Sequential()
-            # output.call = tf.function(model.call)
-        print(response)
-        return jsonify({
-            "output": str(output),
-            "response": str(response)
-        })
+        x=pd.DataFrame.from_dict(data, orient='index').transpose()
+
+        output = str(model_load.predict(x)[0][0])
+        print(output)
+        data['prediction'] = output
+
+        return jsonify(data)
+        
